@@ -1,6 +1,9 @@
-use hyper::{Client, client::{HttpConnector}, StatusCode, body::{to_bytes, Bytes}};
+use hyper::{
+    body::{to_bytes, Bytes},
+    client::HttpConnector,
+    Client, StatusCode,
+};
 use hyper_tls::HttpsConnector;
-
 
 pub struct Http {
     client: Client<HttpsConnector<HttpConnector>>,
@@ -11,9 +14,7 @@ impl Http {
         let https = HttpsConnector::new();
         let client = Client::builder().build::<_, hyper::Body>(https);
 
-        Self {
-            client
-        }
+        Self { client }
     }
 
     pub async fn get(&self, uri: &str) -> Option<Bytes> {
