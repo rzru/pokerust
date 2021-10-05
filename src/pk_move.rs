@@ -72,3 +72,8 @@ pub struct PokemonMoveVersion {
     pub version_group: Option<NamedApiResource>,
     pub level_learned_at: Option<i32>,
 }
+//
+// #[derive(Serialize, Deserialize, Debug)]
+// pub struct PokemonMoveExt {
+//     pub id: Option<i32>,
+// }

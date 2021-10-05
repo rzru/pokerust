@@ -3,12 +3,14 @@ use crate::held_item::PokemonHeldItem;
 use crate::http::Http;
 use crate::named_api_resource::NamedApiResource;
 use crate::pk_move::{PokemonMove, RenderableMove};
+use crate::pk_type::{PokemonType, Type};
 use crate::sprites::PokemonSprites;
 use crate::version_game_index::VersionGameIndex;
 use crate::BASE_URL;
+use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use std::io;
-use tabled::{Alignment, Disable, Full, Modify, Table};
+use tabled::{Alignment, Column, Disable, Format, Full, MaxWidth, Modify, Row, Style, Table};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pokemon {
@@ -46,7 +48,65 @@ impl Pokemon {
         None
     }
 
-    fn render_moves(&self, gg: &str) -> Option<String> {
+    fn prepare_types(&self) -> Vec<String> {
+        self.types
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|pk_type| {
+                let name = pk_type.de_type.as_ref().unwrap().name.as_ref().unwrap();
+                Type::get(name, name).color_fmt()
+            })
+            .collect()
+    }
+
+    fn prepare_games(&self) -> Vec<String> {
+        self.game_indices
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|gi| {
+                let name = gi.version.as_ref().unwrap().name.as_ref().unwrap();
+
+                name.clone()
+            })
+            .collect()
+    }
+
+    pub fn render(&self, should_render_moves: bool, gg: Option<&str>) -> io::Result<()> {
+        let mut base_info_data = vec![
+            ("ID", self.id.unwrap().to_string()),
+            ("Name", self.name.as_ref().unwrap().to_string()),
+            ("Base Experience", self.base_experience.unwrap().to_string()),
+            ("Height", self.height.unwrap().to_string()),
+            ("Weight", self.weight.unwrap().to_string()),
+        ];
+
+        base_info_data.push(("Types", self.prepare_types().join(", ")));
+        base_info_data.push(("Appears at", self.prepare_games().join(", ")));
+
+        if should_render_moves {
+            let info = self.prepare_moves_table(gg.unwrap()).unwrap();
+            base_info_data.push(("Moves", info));
+        }
+
+        let base_info = Table::new(&base_info_data)
+            .with(Disable::Row(..1))
+            .with(Modify::new(Column(..1)).with(Format(|s| s.green().bold().to_string())))
+            .with(Modify::new(Row(6..7)).with(MaxWidth::wrapping(70)))
+            .with(
+                Modify::new(Full)
+                    .with(Alignment::left())
+                    .with(Alignment::center_vertical()),
+            )
+            .to_string();
+
+        println!("{}", base_info);
+
+        Ok(())
+    }
+
+    fn prepare_moves_table(&self, gg: &str) -> Option<String> {
         if let Some(moves) = self.moves.as_ref() {
             let mut prepared_moves: Vec<RenderableMove> = moves
                 .iter()
@@ -62,40 +122,13 @@ impl Pokemon {
                         .with(Alignment::left())
                         .with(Alignment::center_vertical()),
                 )
+                .with(Style::psql())
                 .to_string();
 
             return Some(table);
         }
 
         None
-    }
-
-    pub fn render(&self, should_render_moves: bool, gg: Option<&str>) -> io::Result<()> {
-        let mut base_info_data = vec![
-            ("ID", self.id.unwrap().to_string()),
-            ("Name", self.name.as_ref().unwrap().to_string()),
-            ("Base Experience", self.base_experience.unwrap().to_string()),
-            ("Height", self.height.unwrap().to_string()),
-            ("Weight", self.weight.unwrap().to_string()),
-        ];
-
-        if should_render_moves {
-            let info = self.render_moves(gg.unwrap()).unwrap();
-            base_info_data.push(("Moves", info));
-        }
-
-        let base_info = Table::new(base_info_data)
-            .with(Disable::Row(..1))
-            .with(
-                Modify::new(Full)
-                    .with(Alignment::left())
-                    .with(Alignment::center_vertical()),
-            )
-            .to_string();
-
-        println!("{}", base_info);
-
-        Ok(())
     }
 }
 
@@ -104,11 +137,4 @@ pub struct PokemonStat {
     pub stat: Option<NamedApiResource>,
     pub effort: Option<i32>,
     pub base_stat: Option<i32>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PokemonType {
-    pub slot: Option<i32>,
-    #[serde(rename = "type")]
-    pub de_type: Option<NamedApiResource>,
 }
