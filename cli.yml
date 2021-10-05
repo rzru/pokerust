@@ -1,0 +1,14 @@
+name: pokerust
+version: "0.1"
+author: rzru <razzaru@yandex.ru>
+about: CLI Pokedex build on Rust!
+args:
+  - pokemon:
+      short: p
+      long: pokemon
+      about: Specify pokemon name or id
+      takes_value: true
+  - moves:
+      short: m
+      long: moves
+      about: Show Pokemon moves info
