@@ -8,7 +8,13 @@ args:
       long: pokemon
       about: Specify pokemon name or id
       takes_value: true
+  - games-gen:
+      short: g
+      long: games-gen
+      about: "Specify concrete games from which you need information. Available values: x-y, omega-ruby-alpha-sapphire, sun-moon, ultra-sun-ultra-moon, black-2-white-2, black-white, heartgold-soulsilver, platinum, diamond-pearl, emerald, ruby-sapphire, xd, colosseum, gold-silver, crystal, red-blue, yellow, lets-go, sword-shield, firered-leafgreen"
+      takes_value: true
   - moves:
       short: m
       long: moves
-      about: Show Pokemon moves info
+      about: Show Pokemon moves info (works only with games-gen specified)
+

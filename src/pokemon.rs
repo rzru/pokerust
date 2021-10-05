@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use crate::http::Http;
 use crate::{BASE_URL};
 use std::io;
-use tabled::{Tabled, Table, Header, Modify, Full, Alignment, Disable};
+use tabled::{Tabled, Table, Modify, Full, Alignment, Disable};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pokemon {
@@ -41,44 +41,54 @@ impl Pokemon {
         None
     }
 
-
-    fn render_moves(&self) {
+    fn render_moves(&self, gg: &str) -> Option<String> {
         if let Some(moves) = self.moves.as_ref() {
-            let prepared_moves: Vec<RenderableMove> = moves
+            let mut prepared_moves: Vec<RenderableMove> = moves
                 .iter()
-                .map(|mv| {
-                    mv.to_renderable()
-                })
+                .map(|mv| mv.to_renderable(gg))
+                .flatten()
                 .collect();
 
+            prepared_moves.sort_by_key(|mv| (mv.move_learn_method, mv.level_learned_at));
+
             let table = Table::new(&prepared_moves)
-                .with(Header("MOVES"))
+                .with(Modify::new(Full)
+                    .with(Alignment::left())
+                    .with(Alignment::center_vertical())
+                )
                 .to_string();
 
-            println!("{}", &table);
+            return Some(table);
         }
+
+        None
     }
 
-    pub fn render(&self, should_render_moves: bool) -> io::Result<()> {
-        let base_info = Table::new(
-            vec![
-                ("ID", &self.id.unwrap().to_string()),
-                ("Name", self.name.as_ref().unwrap()),
-                ("Base Experience", &self.base_experience.unwrap().to_string()),
-                ("Height", &self.height.unwrap().to_string()),
-                ("Weight", &self.weight.unwrap().to_string()),
-            ]
-        )
+    pub fn render(&self, should_render_moves: bool, gg: Option<&str>) -> io::Result<()> {
+        let mut base_info_data = vec![
+            ("ID", self.id.unwrap().to_string()),
+            ("Name", self.name.as_ref().unwrap().to_string()),
+            ("Base Experience", self.base_experience.unwrap().to_string()),
+            ("Height", self.height.unwrap().to_string()),
+            ("Weight", self.weight.unwrap().to_string()),
+        ];
+
+        if should_render_moves {
+            let info = self.render_moves(gg.unwrap()).unwrap();
+            base_info_data.push(("Moves", info));
+        }
+
+        let base_info = Table::new(base_info_data)
             .with(Disable::Row(..1))
             .with(Modify::new(Full)
                 .with(Alignment::left())
                 .with(Alignment::center_vertical())
             )
             .to_string();
+
         println!("{}", base_info);
-        if should_render_moves {
-            self.render_moves()
-        }
+
+
 
         Ok(())
     }
@@ -123,7 +133,7 @@ pub struct PokemonMove {
 }
 
 impl PokemonMove {
-    fn to_renderable(&self) -> RenderableMove {
+    fn to_renderable(&self, gg: &str) -> Vec<RenderableMove> {
         let mut name = "";
 
         if let Some(mv) = self.de_move.as_ref() {
@@ -132,52 +142,38 @@ impl PokemonMove {
             }
         }
 
-        let prepared_moves_versions: Vec<RenderableMoveVersion> = self
+        let prepared_moves: Vec<RenderableMove> = self
             .version_group_details
             .as_ref()
             .unwrap()
             .iter()
-            .map(|vgd| vgd.to_renderable())
+            .filter(|pmv| {
+                if let Some(version_group) = &pmv.version_group {
+                    return version_group.name.as_ref().unwrap_or(&String::new()) == gg
+                }
+
+                false
+            })
+            .map(|vgd| vgd.to_renderable(name.to_string()))
             .collect();
 
-        let move_versions = Table::new(prepared_moves_versions)
-            .to_string();
-
-        RenderableMove {
-            name,
-            move_versions,
-        }
+        prepared_moves
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Eq, Ord, PartialEq, PartialOrd, Debug)]
 struct RenderableMove<'a> {
     #[header("Name")]
-    name: &'a str,
-    #[header("Move Versions")]
-    move_versions: String,
-}
-
-#[derive(Tabled)]
-struct RenderableMoveVersion<'a> {
+    name: String,
     #[header("Move Learn Method")]
     move_learn_method: &'a str,
-    #[header("Version Group")]
-    version_group: &'a str,
     #[header("Level Learned At")]
-    level_learned_at: String,
+    level_learned_at: i32,
 }
 
 impl PokemonMoveVersion {
-    fn to_renderable(&self) -> RenderableMoveVersion {
+    fn to_renderable(&self, name: String) -> RenderableMove {
         let mut move_learn_method = "";
-        let mut version_group = "";
-
-        if let Some(vg) = self.version_group.as_ref() {
-            if let Some(nm) = &vg.name {
-                version_group = nm
-            }
-        }
 
         if let Some(mlm) = self.move_learn_method.as_ref() {
             if let Some(nm) = &mlm.name {
@@ -185,12 +181,10 @@ impl PokemonMoveVersion {
             }
         }
 
-        let level_learned_at = if let Some(level_learned_at) = self.level_learned_at { level_learned_at.to_string() } else { "?".to_string() };
-
-        RenderableMoveVersion {
-            version_group,
+        RenderableMove {
             move_learn_method,
-            level_learned_at,
+            level_learned_at: self.level_learned_at.unwrap_or(0),
+            name,
         }
     }
 }

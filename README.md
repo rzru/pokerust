@@ -19,3 +19,11 @@ FLAGS:
 OPTIONS:
     -p, --pokemon <pokemon>    Specify pokemon name or id
 ```
+
+### Example usage
+
+#### Builded
+```shell
+pokerust -p bulbasaur # show bulbasaur info
+pokerust -p bulbasaur -m # show bulbasaur info with additional information about moves
+```
