@@ -1,5 +1,7 @@
 # PokéRust - Terminal PokéDex built in Rust
 
+![2021-10-06 21-08-07](https://user-images.githubusercontent.com/91018799/136259364-32a67938-3749-4c68-af94-4de7c4d4e5f8.gif)
+
 ## Run in dev mode
 ``cargo run --features color -- [OPTIONS] [FLAGS]``
 ## Build
