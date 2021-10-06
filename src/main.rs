@@ -53,7 +53,7 @@ async fn try_process_pokemon<'a>(
         .ok_or("Pokemon not found")?;
     let should_render_moves = matches.is_present("moves");
     let game = matches.value_of("game");
-    let gg = game_entry_by_game(game.unwrap());
+    let gg = if let Some(game) = game { game_entry_by_game(game) } else { None };
 
     if should_render_moves {
         if game.is_none() {

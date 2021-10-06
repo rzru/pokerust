@@ -160,6 +160,7 @@ impl Pokemon {
                         .with(Alignment::left())
                         .with(Alignment::center_vertical()),
                 )
+                .with(Modify::new(Column(..1)).with(Format(|s| s.green().bold().to_string())))
                 .with(Style::default())
                 .to_string();
 

@@ -1,6 +1,5 @@
 use super::{PokemonMoveExt, RenderableMove};
 use crate::named_api_resource::NamedApiResource;
-use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -45,7 +44,7 @@ impl PokemonMoveVersion {
         RenderableMove {
             move_learn_method: self.move_learn_method(),
             level_learned_at: self.level_learned_at.unwrap_or(0),
-            name: name.bold().to_string(),
+            name,
             accuracy,
             power,
             pk_type,
