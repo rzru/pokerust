@@ -10,9 +10,9 @@ USAGE:
     pokerust [FLAGS] [OPTIONS]
 
 FLAGS:
-    -a, --abilities    Show extende info about Pokemon abilities
+    -a, --abilities    Show extended info about pokemon abilities
     -h, --help         Print help information
-    -m, --moves        Show Pokemon moves info (works only with games-gen specified)
+    -m, --moves        Show Pokemon moves info (works only with --game specified)
     -V, --version      Print version information
 
 OPTIONS:
@@ -22,6 +22,7 @@ OPTIONS:
                                platinum, diamond, pearl, emerald, ruby, sapphire, xd, colosseum,
                                gold, silver, crystal, red, blue, yellow, lets-go, sword, shield,
                                firered, leafgreen
+    -p, --pokemon <pokemon>    Specify pokemon name or id
 ```
 ## Example usage
 ### Builded
