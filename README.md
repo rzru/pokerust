@@ -1,9 +1,9 @@
 # PokéRust - Terminal PokéDex built in Rust
 
 ## Run in dev mode
-``cargo run -- [OPTIONS]``
+``cargo run --features color -- [OPTIONS]``
 ## Build
-``cargo build --release``
+``cargo build --features color --release``
 ## Usage info
 ```shell
 USAGE:
