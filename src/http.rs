@@ -31,15 +31,3 @@ impl Http {
         None
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::http::Http;
-
-    #[tokio::test]
-    async fn not_working_with_ridiculous_url() {
-        let http = Http::new();
-
-        assert_eq!(http.get("it's not even http url").await, None);
-    }
-}

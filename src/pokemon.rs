@@ -1,8 +1,8 @@
 use crate::ability::PokemonAbility;
 use crate::held_item::PokemonHeldItem;
 use crate::http::Http;
+use crate::moves::{PokemonMove, PokemonMoveExt, RenderableMove};
 use crate::named_api_resource::NamedApiResource;
-use crate::pk_move::{PokemonMove, PokemonMoveExt, RenderableMove};
 use crate::pk_type::{PokemonType, Type};
 use crate::sprites::PokemonSprites;
 use crate::version_game_index::VersionGameIndex;
@@ -11,8 +11,8 @@ use owo_colors::OwoColorize;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io;
-use std::sync::{Arc, Mutex};
 use tabled::{Alignment, Column, Disable, Format, Full, MaxWidth, Modify, Row, Style, Table};
+use tokio::sync::mpsc;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pokemon {
@@ -75,7 +75,7 @@ impl Pokemon {
             .collect()
     }
 
-    pub async fn render(&self, should_render_moves: bool, gg: Option<&str>) -> io::Result<()> {
+    pub async fn render(&self, should_render_moves: bool, gg: Option<String>) -> io::Result<()> {
         let mut base_info_data = vec![
             ("ID", self.id.unwrap().to_string()),
             ("Name", self.name.as_ref().unwrap().to_string()),
@@ -108,41 +108,46 @@ impl Pokemon {
         Ok(())
     }
 
-    async fn prepare_moves_table(&self, gg: &str) -> Option<String> {
+    async fn fetch_external_moves_info(&self) -> Vec<PokemonMoveExt> {
+        let mut pk_moves_ext = vec![];
+        let (tx, mut rx) = mpsc::channel(32);
+
+        for mv in self.moves.as_ref().unwrap() {
+            let url = String::from(mv.de_move.as_ref().unwrap().url.as_ref().unwrap());
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let http = Http::new();
+                let data = http.get(&url).await;
+
+                if let Some(bytes) = data {
+                    let pk_move_ext: PokemonMoveExt = serde_json::from_slice(&bytes).unwrap();
+
+                    tx.send(pk_move_ext).await.unwrap();
+                }
+            });
+        }
+
+        drop(tx);
+
+        while let Some(message) = rx.recv().await {
+            pk_moves_ext.push(message)
+        }
+
+        pk_moves_ext
+    }
+
+    async fn prepare_moves_table(&self, gg: String) -> Option<String> {
         if let Some(moves) = self.moves.as_ref() {
-            let mut handles = vec![];
-            let pk_moves_ext = Arc::new(Mutex::new(vec![]));
-
-            for mv in moves {
-                let url = String::from(mv.de_move.as_ref().unwrap().url.as_ref().unwrap());
-                let pk_moves_ext = pk_moves_ext.clone();
-                let handle = tokio::spawn(async move {
-                    let http = Http::new();
-                    let data = http.get(&url).await;
-
-                    if let Some(bytes) = data {
-                        let mut pk_moves_ext = pk_moves_ext.lock().unwrap();
-                        let pk_move_ext: PokemonMoveExt = serde_json::from_slice(&bytes).unwrap();
-
-                        pk_moves_ext.push(pk_move_ext);
-                    }
-                });
-
-                handles.push(handle)
-            }
-
-            for handle in handles {
-                handle.await.unwrap();
-            }
+            let externals = self.fetch_external_moves_info().await;
 
             let mut prepared_moves: Vec<RenderableMove> = moves
                 .par_iter()
                 .map(|mv| {
-                    let externals = &*pk_moves_ext.lock().unwrap();
                     let ext = externals.iter().find(|item| {
-                        item.name.as_ref().unwrap() == mv.de_move.as_ref().unwrap().name.as_ref().unwrap()
+                        item.name.as_ref().unwrap()
+                            == mv.de_move.as_ref().unwrap().name.as_ref().unwrap()
                     });
-                    mv.to_renderable(gg, ext)
+                    mv.to_renderable(&gg, ext)
                 })
                 .flatten()
                 .collect();
