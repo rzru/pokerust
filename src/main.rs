@@ -53,7 +53,7 @@ async fn run<'a>() -> Result<(), &'a str> {
             }
         }
 
-        pokemon.render(should_render_moves, gg).unwrap();
+        pokemon.render(should_render_moves, gg).await.unwrap();
     }
 
     Ok(())

@@ -2,14 +2,16 @@ use crate::ability::PokemonAbility;
 use crate::held_item::PokemonHeldItem;
 use crate::http::Http;
 use crate::named_api_resource::NamedApiResource;
-use crate::pk_move::{PokemonMove, RenderableMove};
+use crate::pk_move::{PokemonMove, PokemonMoveExt, RenderableMove};
 use crate::pk_type::{PokemonType, Type};
 use crate::sprites::PokemonSprites;
 use crate::version_game_index::VersionGameIndex;
 use crate::BASE_URL;
 use owo_colors::OwoColorize;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io;
+use std::sync::{Arc, Mutex};
 use tabled::{Alignment, Column, Disable, Format, Full, MaxWidth, Modify, Row, Style, Table};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -73,7 +75,7 @@ impl Pokemon {
             .collect()
     }
 
-    pub fn render(&self, should_render_moves: bool, gg: Option<&str>) -> io::Result<()> {
+    pub async fn render(&self, should_render_moves: bool, gg: Option<&str>) -> io::Result<()> {
         let mut base_info_data = vec![
             ("ID", self.id.unwrap().to_string()),
             ("Name", self.name.as_ref().unwrap().to_string()),
@@ -86,14 +88,14 @@ impl Pokemon {
         base_info_data.push(("Appears at", self.prepare_games().join(", ")));
 
         if should_render_moves {
-            let info = self.prepare_moves_table(gg.unwrap()).unwrap();
+            let info = self.prepare_moves_table(gg.unwrap()).await.unwrap();
             base_info_data.push(("Moves", info));
         }
 
         let base_info = Table::new(&base_info_data)
             .with(Disable::Row(..1))
             .with(Modify::new(Column(..1)).with(Format(|s| s.green().bold().to_string())))
-            .with(Modify::new(Row(6..7)).with(MaxWidth::wrapping(70)))
+            .with(Modify::new(Row(6..7)).with(MaxWidth::wrapping(85)))
             .with(
                 Modify::new(Full)
                     .with(Alignment::left())
@@ -106,11 +108,42 @@ impl Pokemon {
         Ok(())
     }
 
-    fn prepare_moves_table(&self, gg: &str) -> Option<String> {
+    async fn prepare_moves_table(&self, gg: &str) -> Option<String> {
         if let Some(moves) = self.moves.as_ref() {
+            let mut handles = vec![];
+            let pk_moves_ext = Arc::new(Mutex::new(vec![]));
+
+            for mv in moves {
+                let url = String::from(mv.de_move.as_ref().unwrap().url.as_ref().unwrap());
+                let pk_moves_ext = pk_moves_ext.clone();
+                let handle = tokio::spawn(async move {
+                    let http = Http::new();
+                    let data = http.get(&url).await;
+
+                    if let Some(bytes) = data {
+                        let mut pk_moves_ext = pk_moves_ext.lock().unwrap();
+                        let pk_move_ext: PokemonMoveExt = serde_json::from_slice(&bytes).unwrap();
+
+                        pk_moves_ext.push(pk_move_ext);
+                    }
+                });
+
+                handles.push(handle)
+            }
+
+            for handle in handles {
+                handle.await.unwrap();
+            }
+
             let mut prepared_moves: Vec<RenderableMove> = moves
-                .iter()
-                .map(|mv| mv.to_renderable(gg))
+                .par_iter()
+                .map(|mv| {
+                    let externals = &*pk_moves_ext.lock().unwrap();
+                    let ext = externals.iter().find(|item| {
+                        item.name.as_ref().unwrap() == mv.de_move.as_ref().unwrap().name.as_ref().unwrap()
+                    });
+                    mv.to_renderable(gg, ext)
+                })
                 .flatten()
                 .collect();
 
@@ -122,7 +155,7 @@ impl Pokemon {
                         .with(Alignment::left())
                         .with(Alignment::center_vertical()),
                 )
-                .with(Style::psql())
+                .with(Style::default())
                 .to_string();
 
             return Some(table);
