@@ -1,12 +1,10 @@
-## PokéRust - Terminal PokéDex built in Rust
+# PokéRust - Terminal PokéDex built in Rust
 
-### Run in dev mode
+## Run in dev mode
 ``cargo run -- [OPTIONS]``
-
-### Build
+## Build
 ``cargo build --release``
-
-### Usage info
+## Usage info
 ```shell
 USAGE:
     pokerust [FLAGS] [OPTIONS]
@@ -25,10 +23,8 @@ OPTIONS:
                                gold, silver, crystal, red, blue, yellow, lets-go, sword, shield,
                                firered, leafgreen
 ```
-
-### Example usage
-
-#### Builded
+## Example usage
+### Builded
 ```shell
 pokerust -p bulbasaur # show bulbasaur info
 pokerust -p bulbasaur --moves --game=x # show bulbasaur info with additional information about moves in concrete game

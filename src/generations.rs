@@ -27,25 +27,20 @@ pub fn game_entry_by_game(game: &str) -> Option<String> {
     games_to_generations.insert("x", game_entry_xy);
     games_to_generations.insert("y", game_entry_xy);
     games_to_generations.insert("omega-ruby", game_entry_oras);
-    games_to_generations.insert("omega ruby", game_entry_oras);
-    games_to_generations.insert("alpha sapphire", game_entry_oras);
     games_to_generations.insert("alpha-sapphire", game_entry_oras);
     games_to_generations.insert("sun", game_entry_sm);
     games_to_generations.insert("moon", game_entry_sm);
     games_to_generations.insert("ultra-sun", game_entry_usum);
-    games_to_generations.insert("ultra sun", game_entry_usum);
     games_to_generations.insert("ultra-moon", game_entry_usum);
-    games_to_generations.insert("black 2", game_entry_b2w2);
+    games_to_generations.insert("black2", game_entry_b2w2);
     games_to_generations.insert("black-2", game_entry_b2w2);
     games_to_generations.insert("white-2", game_entry_b2w2);
-    games_to_generations.insert("white 2", game_entry_b2w2);
+    games_to_generations.insert("white2", game_entry_b2w2);
     games_to_generations.insert("black", game_entry_bw);
     games_to_generations.insert("white", game_entry_bw);
     games_to_generations.insert("heartgold", game_entry_hgss);
     games_to_generations.insert("heart-gold", game_entry_hgss);
-    games_to_generations.insert("heart gold", game_entry_hgss);
     games_to_generations.insert("soulsilver", game_entry_hgss);
-    games_to_generations.insert("soul silver", game_entry_hgss);
     games_to_generations.insert("soul-silver", game_entry_hgss);
     games_to_generations.insert("platinum", game_entry_pl);
     games_to_generations.insert("diamond", game_entry_dp);
@@ -67,11 +62,10 @@ pub fn game_entry_by_game(game: &str) -> Option<String> {
     games_to_generations.insert("sword", game_entry_ss);
     games_to_generations.insert("shield", game_entry_ss);
     games_to_generations.insert("firered", game_entry_frlf);
-    games_to_generations.insert("fire red", game_entry_frlf);
     games_to_generations.insert("fire-red", game_entry_frlf);
     games_to_generations.insert("leaf-green", game_entry_frlf);
-    games_to_generations.insert("leaf green", game_entry_frlf);
     games_to_generations.insert("leafgreen", game_entry_frlf);
+
     if let Some(value) = games_to_generations.get(game) {
         return Some(value.to_string());
     }
