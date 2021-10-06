@@ -10,6 +10,7 @@ mod pk_type;
 mod pokemon;
 mod sprites;
 mod version_game_index;
+mod pokemon_stat;
 
 pub use fetch_external::fetch_external;
 

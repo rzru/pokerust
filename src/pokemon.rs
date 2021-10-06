@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::io;
 use tabled::{Alignment, Column, Disable, Format, Full, MaxWidth, Modify, Row, Table};
+use crate::pokemon_stat::PokemonStat;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pokemon {
@@ -95,6 +96,17 @@ impl Pokemon {
             .collect()
     }
 
+    fn prepare_stats(&self) -> Vec<String> {
+        self.stats
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|stat| {
+                stat.to_string()
+            })
+            .collect()
+    }
+
     pub async fn render(
         &self,
         should_render_moves: bool,
@@ -111,6 +123,7 @@ impl Pokemon {
         ];
 
         base_info_data.push(("Types", self.prepare_types().join(", ")));
+        base_info_data.push(("Base stats", self.prepare_stats().join(", ")));
         base_info_data.push(("Appears at", self.prepare_games().join(", ")));
 
         if should_render_abilities {
@@ -128,7 +141,7 @@ impl Pokemon {
         let base_info = Table::new(&base_info_data)
             .with(Disable::Row(..1))
             .with(Modify::new(Column(..1)).with(Format(|s| s.green().bold().to_string())))
-            .with(Modify::new(Row(6..7)).with(MaxWidth::wrapping(85)))
+            .with(Modify::new(Row(7..8)).with(MaxWidth::wrapping(80)))
             .with(
                 Modify::new(Full)
                     .with(Alignment::left())
@@ -217,11 +230,4 @@ impl Pokemon {
 
         None
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PokemonStat {
-    pub stat: Option<NamedApiResource>,
-    pub effort: Option<i32>,
-    pub base_stat: Option<i32>,
 }
