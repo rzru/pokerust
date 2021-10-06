@@ -19,4 +19,9 @@ args:
       short: m
       long: moves
       about: Show Pokemon moves info (works only with games-gen specified)
+  - abilities:
+      short: a
+      long: abilities
+      about: Show extende info about Pokemon abilities
+
 

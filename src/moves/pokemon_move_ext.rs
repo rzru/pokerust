@@ -1,3 +1,4 @@
+use crate::flavor_text_entry::FlavorTextEntry;
 use crate::named_api_resource::NamedApiResource;
 use crate::pk_type::Type;
 use serde::{Deserialize, Serialize};
@@ -11,14 +12,7 @@ pub struct PokemonMoveExt {
     pub power: Option<i32>,
     #[serde(rename = "type")]
     pub pk_type: Option<NamedApiResource>,
-    pub flavor_text_entries: Option<Vec<MoveFlavorText>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MoveFlavorText {
-    pub flavor_text: Option<String>,
-    pub version_group: Option<NamedApiResource>,
-    pub language: Option<NamedApiResource>,
+    pub flavor_text_entries: Option<Vec<FlavorTextEntry>>,
 }
 
 impl PokemonMoveExt {
@@ -60,7 +54,7 @@ impl PokemonMoveExt {
 
     pub fn description(&self, gg: &str) -> String {
         let mut description = String::new();
-        let descriptions: Vec<&MoveFlavorText> = self
+        let descriptions: Vec<&FlavorTextEntry> = self
             .flavor_text_entries
             .as_ref()
             .unwrap()

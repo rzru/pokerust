@@ -1,4 +1,6 @@
-mod ability;
+mod abilities;
+mod fetch_external;
+mod flavor_text_entry;
 mod generations;
 mod held_item;
 mod http;
@@ -9,9 +11,7 @@ mod pokemon;
 mod sprites;
 mod version_game_index;
 
-#[cfg(test)]
-#[macro_use]
-extern crate yup_hyper_mock as hyper_mock;
+pub use fetch_external::fetch_external;
 
 use crate::http::Http;
 use crate::pokemon::Pokemon;
@@ -52,8 +52,13 @@ async fn try_process_pokemon<'a>(
         .await
         .ok_or("Pokemon not found")?;
     let should_render_moves = matches.is_present("moves");
+    let should_render_abilities = matches.is_present("abilities");
     let game = matches.value_of("game");
-    let gg = if let Some(game) = game { game_entry_by_game(game) } else { None };
+    let gg = if let Some(game) = game {
+        game_entry_by_game(game)
+    } else {
+        None
+    };
 
     if should_render_moves {
         if game.is_none() {
@@ -64,7 +69,10 @@ async fn try_process_pokemon<'a>(
         }
     }
 
-    if let Ok(_) = pokemon.render(should_render_moves, gg).await {
+    if let Ok(_) = pokemon
+        .render(should_render_moves, should_render_abilities, gg)
+        .await
+    {
         return Ok(());
     }
 
