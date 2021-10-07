@@ -33,7 +33,7 @@ impl PokemonMoveExt {
     }
 
     pub fn power(&self) -> i32 {
-        if let Some(power) = self.pp {
+        if let Some(power) = self.power {
             power
         } else {
             0
