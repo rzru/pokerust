@@ -22,6 +22,7 @@ args:
   - abilities:
       short: a
       long: abilities
-      about: Show extende info about Pokemon abilities
-
-
+      about: Show extended info about Pokemon abilities
+  - ext:
+      long: ext
+      about: Show extended info about pokemon, such as evolution chain, gender rates, description, base happiness, capture rate etc.

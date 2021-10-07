@@ -1,4 +1,5 @@
 mod abilities;
+mod api_resource;
 mod fetch_external;
 mod flavor_text_entry;
 mod generations;
@@ -8,9 +9,10 @@ mod moves;
 mod named_api_resource;
 mod pk_type;
 mod pokemon;
+mod pokemon_species;
+mod pokemon_stat;
 mod sprites;
 mod version_game_index;
-mod pokemon_stat;
 
 pub use fetch_external::fetch_external;
 
@@ -19,6 +21,7 @@ use crate::pokemon::Pokemon;
 
 use crate::generations::game_entry_by_game;
 use clap::{load_yaml, App, ArgMatches};
+use std::collections::HashMap;
 
 static BASE_URL: &str = "https://pokeapi.co/api/v2";
 
@@ -52,16 +55,20 @@ async fn try_process_pokemon<'a>(
     let pokemon = Pokemon::new(client, pokemon_name)
         .await
         .ok_or("Pokemon not found")?;
-    let should_render_moves = matches.is_present("moves");
-    let should_render_abilities = matches.is_present("abilities");
-    let game = matches.value_of("game");
-    let gg = if let Some(game) = game {
-        game_entry_by_game(game)
-    } else {
-        None
-    };
 
-    if should_render_moves {
+    let mut render_details = HashMap::new();
+    render_details.insert("moves", matches.is_present("moves"));
+    render_details.insert("abilities", matches.is_present("abilities"));
+    render_details.insert("ext", matches.is_present("ext"));
+
+    let mut gg = None;
+    let game = matches.value_of("game");
+
+    if let Some(game) = game {
+        gg = game_entry_by_game(game)
+    }
+
+    if *render_details.get("moves").unwrap() {
         if game.is_none() {
             return Err("You should use --moves flag only with --game option specified");
         }
@@ -71,7 +78,7 @@ async fn try_process_pokemon<'a>(
     }
 
     if let Ok(_) = pokemon
-        .render(should_render_moves, should_render_abilities, gg)
+        .render(render_details, gg.unwrap_or(String::new()))
         .await
     {
         return Ok(());

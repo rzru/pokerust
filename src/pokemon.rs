@@ -6,16 +6,18 @@ use crate::http::Http;
 use crate::moves::{PokemonMove, PokemonMoveExt, RenderableMove};
 use crate::named_api_resource::NamedApiResource;
 use crate::pk_type::{PokemonType, Type};
+use crate::pokemon_species::PokemonSpecies;
+use crate::pokemon_stat::PokemonStat;
 use crate::sprites::PokemonSprites;
 use crate::version_game_index::VersionGameIndex;
 use crate::BASE_URL;
 use owo_colors::OwoColorize;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io;
 use tabled::{Alignment, Column, Disable, Format, Full, MaxWidth, Modify, Row, Table};
-use crate::pokemon_stat::PokemonStat;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pokemon {
@@ -101,51 +103,75 @@ impl Pokemon {
             .as_ref()
             .unwrap()
             .iter()
-            .map(|stat| {
-                stat.to_string()
-            })
+            .map(|stat| stat.to_string())
             .collect()
     }
 
-    pub async fn render(
-        &self,
-        should_render_moves: bool,
-        should_render_abilities: bool,
-        gg: Option<String>,
-    ) -> io::Result<()> {
-        let gg = if let Some(gg) = gg { gg } else { String::new() };
+    pub async fn render(&self, render_details: HashMap<&str, bool>, gg: String) -> io::Result<()> {
         let mut base_info_data = vec![
             ("ID", self.id.unwrap().to_string()),
             ("Name", self.name.as_ref().unwrap().to_string()),
             ("Base Experience", self.base_experience.unwrap().to_string()),
             ("Height", self.height.unwrap().to_string()),
             ("Weight", self.weight.unwrap().to_string()),
+            ("Types", self.prepare_types().join(", ")),
+            ("Base stats", self.prepare_stats().join(", ")),
+            ("Appears at", self.prepare_games().join(", ")),
         ];
 
-        base_info_data.push(("Types", self.prepare_types().join(", ")));
-        base_info_data.push(("Base stats", self.prepare_stats().join(", ")));
-        base_info_data.push(("Appears at", self.prepare_games().join(", ")));
+        if *render_details.get("ext").unwrap() {
+            fn fetch_species_url(pokemon: &&Pokemon) -> String {
+                pokemon
+                    .species
+                    .as_ref()
+                    .unwrap()
+                    .url
+                    .as_ref()
+                    .unwrap()
+                    .to_string()
+            }
 
-        if should_render_abilities {
-            let info = self.prepare_abilities_table(&gg).await.unwrap();
-            base_info_data.push(("Abilities", info));
-        } else {
-            base_info_data.push(("Abilities", self.prepare_abilities().join(", ")));
+            let pokemon_species_info_vec = fetch_external::<&Pokemon, PokemonSpecies>(
+                vec![self].as_slice(),
+                fetch_species_url,
+            )
+            .await;
+            let pokemon_species_info = pokemon_species_info_vec.first();
+
+            if let Some(pokemon_species_info) = pokemon_species_info {
+                let mut species_info_entries = vec![
+                    ("Base Happiness", pokemon_species_info.base_happiness()),
+                    ("Capture Rate", pokemon_species_info.capture_rate()),
+                    ("Gender Rate", pokemon_species_info.gender_rate()),
+                    ("Is legendary", pokemon_species_info.is_legendary()),
+                    ("Description", pokemon_species_info.description()),
+                ];
+
+                base_info_data.append(&mut species_info_entries)
+            }
         }
 
-        if should_render_moves {
-            let info = self.prepare_moves_table(&gg).await.unwrap();
-            base_info_data.push(("Moves", info));
+        base_info_data.push((
+            "Abilities",
+            if *render_details.get("abilities").unwrap() {
+                self.prepare_abilities_table(&gg).await.unwrap()
+            } else {
+                self.prepare_abilities().join(", ")
+            },
+        ));
+
+        if *render_details.get("moves").unwrap() {
+            base_info_data.push(("Moves", self.prepare_moves_table(&gg).await.unwrap()));
         }
 
         let base_info = Table::new(&base_info_data)
             .with(Disable::Row(..1))
-            .with(Modify::new(Column(..1)).with(Format(|s| s.green().bold().to_string())))
+            .with(Modify::new(Column(..1)).with(Format(|s| s.bold().to_string())))
             .with(Modify::new(Row(7..8)).with(MaxWidth::wrapping(80)))
             .with(
                 Modify::new(Full)
                     .with(Alignment::left())
-                    .with(Alignment::center_vertical()),
+                    .with(Alignment::top()),
             )
             .to_string();
 
@@ -161,7 +187,8 @@ impl Pokemon {
             }
 
             let externals =
-                fetch_external::<PokemonAbility, PokemonAbilityExt>(abilities, fetch_move_url).await;
+                fetch_external::<PokemonAbility, PokemonAbilityExt>(abilities, fetch_move_url)
+                    .await;
 
             let prepared_abilities: Vec<RenderableAbility> = abilities
                 .par_iter()
@@ -179,11 +206,11 @@ impl Pokemon {
                 .with(
                     Modify::new(Full)
                         .with(Alignment::left())
-                        .with(Alignment::center_vertical()),
+                        .with(Alignment::top()),
                 )
-                .with(Modify::new(Column(..1)).with(Format(|s| s.green().bold().to_string())))
-                .with(Modify::new(Column(1..2)).with(MaxWidth::wrapping(30)))
-                .with(Modify::new(Column(2..3)).with(MaxWidth::wrapping(60)))
+                .with(Modify::new(Column(..1)).with(Format(|s| s.bold().to_string())))
+                .with(Modify::new(Column(1..2)).with(MaxWidth::wrapping(20)))
+                .with(Modify::new(Column(2..3)).with(MaxWidth::wrapping(35)))
                 .to_string();
 
             return Some(table);
@@ -193,7 +220,6 @@ impl Pokemon {
     }
 
     async fn prepare_moves_table(&self, gg: &str) -> Option<String> {
-        // String::from(ability.ability.as_ref().unwrap().url.as_ref().unwrap())
         if let Some(moves) = self.moves.as_ref() {
             fn fetch_move_url(mv: &PokemonMove) -> String {
                 String::from(mv.de_move.as_ref().unwrap().url.as_ref().unwrap())
@@ -220,9 +246,9 @@ impl Pokemon {
                 .with(
                     Modify::new(Full)
                         .with(Alignment::left())
-                        .with(Alignment::center_vertical()),
+                        .with(Alignment::top()),
                 )
-                .with(Modify::new(Column(..1)).with(Format(|s| s.green().bold().to_string())))
+                .with(Modify::new(Column(..1)).with(Format(|s| s.bold().to_string())))
                 .to_string();
 
             return Some(table);

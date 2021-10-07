@@ -9,9 +9,11 @@ USAGE:
     pokerust [FLAGS] [OPTIONS]
 
 FLAGS:
-    -a, --abilities    Show extended info about pokemon abilities
+    -a, --abilities    Show extended info about Pokemon abilities
+        --ext          Show extended info about pokemon, such as evolution chain, gender rates,
+                       description, base happiness, capture rate etc.
     -h, --help         Print help information
-    -m, --moves        Show Pokemon moves info (works only with --game specified)
+    -m, --moves        Show Pokemon moves info (works only with games-gen specified)
     -V, --version      Print version information
 
 OPTIONS:
@@ -22,6 +24,7 @@ OPTIONS:
                                gold, silver, crystal, red, blue, yellow, lets-go, sword, shield,
                                firered, leafgreen
     -p, --pokemon <pokemon>    Specify pokemon name or id
+
 ```
 ## Example usage
 ### Builded
